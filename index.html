@@ -12,6 +12,7 @@
 <link rel="manifest" id="manifestLink">
 <title>刷题助手</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -428,16 +429,60 @@ body {
    ================================================================ */
 function $id(id) { return document.getElementById(id); }
 
-function loadData(key) {
-  try { return JSON.parse(localStorage.getItem(key)) || []; }
-  catch { return []; }
+// localforage 降级垫片逻辑，防止 CDN 加载失败报错
+if (typeof localforage === 'undefined') {
+  console.warn('localforage is not defined. Falling back to localStorage.');
+  window.localforage = {
+    getItem: function(key) {
+      return new Promise((resolve) => {
+        try {
+          const val = localStorage.getItem(key);
+          resolve(val ? JSON.parse(val) : null);
+        } catch {
+          resolve(null);
+        }
+      });
+    },
+    setItem: function(key, val) {
+      return new Promise((resolve) => {
+        try {
+          localStorage.setItem(key, JSON.stringify(val));
+        } catch {}
+        resolve(val);
+      });
+    },
+    removeItem: function(key) {
+      return new Promise((resolve) => {
+        try {
+          localStorage.removeItem(key);
+        } catch {}
+        resolve();
+      });
+    }
+  };
 }
-function saveData(key, data) {
-  localStorage.setItem(key, JSON.stringify(data));
+
+async function loadData(key) {
+  try {
+    const val = await localforage.getItem(key);
+    return val;
+  } catch {
+    return null;
+  }
 }
+
+async function saveData(key, data) {
+  try {
+    await localforage.setItem(key, data);
+  } catch (e) {
+    console.error(`Error saving data for ${key}:`, e);
+  }
+}
+
 function genId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
+
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -447,14 +492,55 @@ function shuffle(arr) {
   return a;
 }
 
-let questionBank = loadData('questionBank');
-let errorBook = loadData('errorBook');
-let settings = loadData('settings') || {};
+let questionBank = [];
+let errorBook = [];
+let settings = {};
 
-function persist() {
-  saveData('questionBank', questionBank);
-  saveData('errorBook', errorBook);
-  saveData('settings', settings);
+// 异步加载与历史迁移
+async function initData() {
+  try {
+    let qb = await loadData('questionBank');
+    let eb = await loadData('errorBook');
+    let setts = await loadData('settings');
+
+    // 如果 IndexedDB 没有数据，但 localStorage 中有旧数据，则执行无缝迁移
+    let migrated = false;
+    if (!qb && localStorage.getItem('questionBank')) {
+      try {
+        qb = JSON.parse(localStorage.getItem('questionBank')) || [];
+        migrated = true;
+      } catch (e) {}
+    }
+    if (!eb && localStorage.getItem('errorBook')) {
+      try {
+        eb = JSON.parse(localStorage.getItem('errorBook')) || [];
+        migrated = true;
+      } catch (e) {}
+    }
+    if (!setts && localStorage.getItem('settings')) {
+      try {
+        setts = JSON.parse(localStorage.getItem('settings')) || {};
+        migrated = true;
+      } catch (e) {}
+    }
+
+    questionBank = qb || [];
+    errorBook = eb || [];
+    settings = setts || {};
+
+    if (migrated) {
+      console.log('Migrated old localStorage data to IndexedDB.');
+      await persist();
+    }
+  } catch (err) {
+    console.error("Failed to initialize data from IndexedDB:", err);
+  }
+}
+
+async function persist() {
+  await saveData('questionBank', questionBank);
+  await saveData('errorBook', errorBook);
+  await saveData('settings', settings);
 }
 
 /* ================================================================
@@ -556,18 +642,18 @@ function renderManage(container) {
     });
     downloadJSON('errorBook.json', data);
   });
-  $id('btnClear').addEventListener('click', () => {
+  $id('btnClear').addEventListener('click', async () => {
     if (confirm('确定要清空所有题库数据吗？错题集也会一并清空。此操作不可恢复。')) {
       questionBank = [];
       errorBook = [];
-      persist();
+      await persist();
       renderPage();
     }
   });
-  $id('btnClearErrors').addEventListener('click', () => {
+  $id('btnClearErrors').addEventListener('click', async () => {
     if (confirm('确定要清空错题集吗？')) {
       errorBook = [];
-      persist();
+      await persist();
       renderPage();
     }
   });
@@ -581,8 +667,12 @@ function handleImport(e) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(evt) {
+  reader.onload = async function(evt) {
     try {
+      showImportMsg('info', '正在解析并保存数据，请稍候...');
+      // 允许 UI 渲染提示消息
+      await new Promise(resolve => setTimeout(resolve, 50));
+
       const wb = XLSX.read(evt.target.result, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
@@ -669,7 +759,7 @@ function handleImport(e) {
         newCount++;
       }
 
-      persist();
+      await persist();
       showImportMsg('success', `导入成功！新增 ${newCount} 题，跳过 ${skipCount} 题（重复或格式问题）`);
       setTimeout(() => renderPage(), 800);
     } catch (err) {
@@ -1127,9 +1217,9 @@ function renderErrorBook(container) {
 
     // 移除按钮事件
     list.querySelectorAll('[data-action="remove"]').forEach(btn => {
-      btn.addEventListener('click', function() {
+      btn.addEventListener('click', async function() {
         errorBook = errorBook.filter(e => e.questionId !== this.dataset.id);
-        persist();
+        await persist();
         renderList($id('errorFilter').value);
       });
     });
@@ -1307,12 +1397,12 @@ function initTheme() {
   
   applyTheme(theme);
   
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', async () => {
     const currentTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
     const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
     applyTheme(nextTheme);
     settings.theme = nextTheme;
-    persist();
+    await persist();
   });
 }
 
@@ -1420,8 +1510,14 @@ $id('container').addEventListener('click', function(e) {
   }
 });
 
-initTheme();
-renderPage();
+// 异步启动入口
+async function initApp() {
+  await initData();
+  initTheme();
+  renderPage();
+}
+
+initApp();
 </script>
 </body>
 </html>
