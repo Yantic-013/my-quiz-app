@@ -243,11 +243,21 @@ body {
 .stat-num { font-size: 32px; font-weight: 700; color: var(--primary); font-family: 'Outfit', sans-serif; }
 .stat-label { font-size: 13px; color: var(--text-sub); margin-top: 6px; font-weight: 500; }
 
-/* ===== 题目导航 ===== */
 .quiz-nav-sidebar {
   display: flex; flex-wrap: wrap; gap: 8px;
   padding: 16px 0; margin-bottom: 20px;
   border-bottom: 1px solid var(--border-color);
+  transition: all var(--transition-normal);
+  max-height: 1000px;
+  opacity: 1;
+  overflow: hidden;
+}
+.quiz-nav-sidebar.collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding: 0;
+  margin-bottom: 0;
+  border-bottom-color: transparent;
 }
 .quiz-nav-dot {
   width: 38px; height: 38px; border-radius: 50%;
@@ -854,7 +864,8 @@ function startQuiz(questions, chapter) {
     currentIndex: 0,
     chapter: chapter,
     mode: 'practice',
-    submitted: false
+    submitted: false,
+    navCollapsed: false
   };
   renderQuizCard();
 }
@@ -869,7 +880,7 @@ function renderQuizCard() {
   const answeredCount = quizState.answers.filter(a => a !== null && a.length > 0).length;
 
   // 题目导航按钮
-  let navHtml = '<div class="quiz-nav-sidebar">';
+  let navHtml = `<div class="quiz-nav-sidebar ${quizState.navCollapsed ? 'collapsed' : ''}" id="quizNavSidebar">`;
   for (let i = 0; i < total; i++) {
     const cls = i === idx ? 'current' : (quizState.answers[i] && quizState.answers[i].length > 0 ? 'answered' : '');
     navHtml += `<span class="quiz-nav-dot ${cls}" data-idx="${i}">${i + 1}</span>`;
@@ -880,7 +891,10 @@ function renderQuizCard() {
     <div class="card">
       <div class="quiz-header">
         <span class="tag ${q.type === 'multi' ? 'tag-multi' : 'tag-single'}">${q.type === 'multi' ? '多选题' : '单选题'}</span>
-        <span class="quiz-progress">第 ${idx + 1} 题 / 共 ${total} 题 · 已答 ${answeredCount} 题</span>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span class="quiz-progress">第 ${idx + 1} 题 / 共 ${total} 题 · 已答 ${answeredCount} 题</span>
+          <button class="btn btn-sm" id="btnToggleNav" style="padding: 4px 10px; font-size: 12px; font-weight: 600; border-color: var(--primary); color: var(--primary);">${quizState.navCollapsed ? '展开题号' : '收起题号'}</button>
+        </div>
       </div>
 
       ${navHtml}
@@ -941,6 +955,16 @@ function renderQuizCard() {
     });
   });
 
+  $id('btnToggleNav').addEventListener('click', () => {
+    const nav = $id('quizNavSidebar');
+    const btn = $id('btnToggleNav');
+    if (nav && btn) {
+      const isCollapsed = nav.classList.toggle('collapsed');
+      quizState.navCollapsed = isCollapsed;
+      btn.textContent = isCollapsed ? '展开题号' : '收起题号';
+    }
+  });
+
   $id('btnPrev').addEventListener('click', () => { quizState.currentIndex--; renderQuizCard(); });
   if (idx < total - 1) {
     $id('btnNext').addEventListener('click', () => { quizState.currentIndex++; renderQuizCard(); });
@@ -981,51 +1005,100 @@ function showQuizResult(results) {
   const wrong = quizState.wrong;
   const pct = total > 0 ? Math.round(correct / total * 100) : 0;
 
-  let detailHtml = results.map((r, i) => {
-    const reverseMap = {};
-    if (r.letterMap) {
-      for (const [dl, ol] of Object.entries(r.letterMap)) { reverseMap[ol] = dl; }
+  let singleScore = 0;
+  let multiScore = 0;
+  let earnedScore = 0;
+  let scoreHtml = '';
+
+  const isExam = quizState.chapter === '模拟考试';
+
+  if (isExam) {
+    const S = results.filter(q => q.type === 'single').length;
+    const M = results.filter(q => q.type === 'multi').length;
+    const totalCount = S + M;
+    if (totalCount > 0) {
+      singleScore = 100 / totalCount;
+      multiScore = singleScore; // 1:1 ratio
     }
-    const correctDisplay = r.answer.map(a => reverseMap[a] || a).sort().join(', ');
-    const userDisplay = (r.userDisplayLetters && r.userDisplayLetters.length > 0)
-      ? r.userDisplayLetters.sort().join(', ') : '未作答';
-    const statusIcon = r.isCorrect ? '✅' : '❌';
-    const statusColor = r.isCorrect ? 'var(--correct)' : 'var(--wrong)';
-    const itemClass = r.isCorrect ? 'correct-item' : 'wrong-item';
+    results.forEach(r => {
+      if (r.isCorrect) {
+        earnedScore += singleScore;
+      }
+    });
 
-    // 选项列表（标注正确答案和用户选择）
-    const optionsDetail = r.displayOptions.map(opt => {
-      const isCorrectOpt = r.answer.includes(r.letterMap ? r.letterMap[opt.letter] || opt.letter : opt.letter);
-      const isUserPick = (r.userDisplayLetters || []).includes(opt.letter);
-      let cls = '';
-      if (isCorrectOpt && isUserPick) cls = 'correct';
-      else if (isUserPick && !isCorrectOpt) cls = 'wrong';
-      else if (isCorrectOpt) cls = 'correct';
-      return `<span class="result-opt ${cls}">${opt.letter}. ${esc(opt.text)}</span>`;
-    }).join(' ');
+    const displayEarned = Math.round(earnedScore * 10) / 10;
+    const displaySingle = Math.round(singleScore * 100) / 100;
 
-    return `
-      <div class="result-item collapsed ${itemClass}" data-idx="${i}">
-        <div class="result-summary" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-          <span style="flex:1; min-width:0;">
-            <strong>${statusIcon} ${i + 1}.</strong>
-            <span class="tag ${r.type === 'multi' ? 'tag-multi' : 'tag-single'}" style="margin:0 4px;">${r.type === 'multi' ? '多选' : '单选'}</span>
-            <span style="color:var(--text-main); font-weight:500;">${esc(r.question)}</span>
-          </span>
-          <span style="flex-shrink:0; font-size:13px; font-weight:600; color:${statusColor};">${r.isCorrect ? '✓' : '✗'} ${userDisplay}</span>
-          <span class="result-arrow" style="flex-shrink:0; font-size:12px; color:var(--text-sub); transition:transform 0.2s;">▶</span>
+    scoreHtml = `
+      <div class="card" style="text-align:center; background: linear-gradient(135deg, var(--primary-light), var(--bg-card)); border-color: var(--primary); margin-bottom:20px;">
+        <h3 style="font-size:16px; font-weight:600; color:var(--primary); margin-bottom:8px;">模拟考试得分</h3>
+        <div style="font-size:54px; font-weight:800; color:var(--primary); font-family:'Outfit', sans-serif;">
+          ${displayEarned} <span style="font-size:18px; font-weight:500; color:var(--text-sub);">/ 100 分</span>
         </div>
-        <div class="result-detail" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color); font-size:13px; color:var(--text-sub);">
-          <div style="margin-bottom:8px;"><strong>选项：</strong>${optionsDetail}</div>
-          <div style="margin-bottom:6px; color:var(--text-main);">你的答案：<strong style="color:${statusColor}">${userDisplay}</strong></div>
-          ${!r.isCorrect ? `<div style="margin-bottom:6px; color:var(--text-main);">正确答案：<strong style="color:var(--correct)">${correctDisplay}</strong></div>` : ''}
-          ${r.explanation ? `<div class="explanation" style="margin-top:8px"><strong>解析：</strong>${esc(r.explanation)}</div>` : ''}
-        </div>
+        <p style="font-size:12px; color:var(--text-sub); margin-top:8px; font-weight:500;">
+          分值均等分配（1:1）：每题 ${displaySingle} 分
+        </p>
       </div>
     `;
-  }).join('');
+  }
+
+  const wrongResults = results.filter(r => !r.isCorrect);
+  let detailHtml = '';
+  if (wrongResults.length === 0) {
+    detailHtml = '<div style="text-align:center; padding:32px 0; color:var(--correct); font-weight:600; font-size:15px;">🎉 太棒了！本轮练习全部答对，没有错题！</div>';
+  } else {
+    detailHtml = wrongResults.map(r => {
+      const idx = results.indexOf(r);
+      const reverseMap = {};
+      if (r.letterMap) {
+        for (const [dl, ol] of Object.entries(r.letterMap)) { reverseMap[ol] = dl; }
+      }
+      const correctDisplay = r.answer.map(a => reverseMap[a] || a).sort().join(', ');
+      const userDisplay = (r.userDisplayLetters && r.userDisplayLetters.length > 0)
+        ? r.userDisplayLetters.sort().join(', ') : '未作答';
+      const statusIcon = '❌';
+      const statusColor = 'var(--wrong)';
+      const itemClass = 'wrong-item';
+
+      // 选项列表（标注正确答案和用户选择）
+      const optionsDetail = r.displayOptions.map(opt => {
+        const isCorrectOpt = r.answer.includes(r.letterMap ? r.letterMap[opt.letter] || opt.letter : opt.letter);
+        const isUserPick = (r.userDisplayLetters || []).includes(opt.letter);
+        let cls = '';
+        if (isCorrectOpt && isUserPick) cls = 'correct';
+        else if (isUserPick && !isCorrectOpt) cls = 'wrong';
+        else if (isCorrectOpt) cls = 'correct';
+        return `<span class="result-opt ${cls}">${opt.letter}. ${esc(opt.text)}</span>`;
+      }).join(' ');
+
+      const qScore = (r.type === 'single') ? singleScore : multiScore;
+      const displayQScore = Math.round(qScore * 100) / 100;
+      const scoreHint = isExam ? ` <span style="font-size:11px; color:var(--text-sub); font-weight:normal;">(分值: ${displayQScore}分)</span>` : '';
+
+      return `
+        <div class="result-item collapsed ${itemClass}" data-idx="${idx}">
+          <div class="result-summary" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <span style="flex:1; min-width:0;">
+              <strong>${statusIcon} ${idx + 1}.</strong>
+              <span class="tag ${r.type === 'multi' ? 'tag-multi' : 'tag-single'}" style="margin:0 4px;">${r.type === 'multi' ? '多选' : '单选'}</span>
+              <span style="color:var(--text-main); font-weight:500;">${esc(r.question)}</span>${scoreHint}
+            </span>
+            <span style="flex-shrink:0; font-size:13px; font-weight:600; color:${statusColor};">✗ ${userDisplay}</span>
+            <span class="result-arrow" style="flex-shrink:0; font-size:12px; color:var(--text-sub); transition:transform 0.2s;">▶</span>
+          </div>
+          <div class="result-detail" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color); font-size:13px; color:var(--text-sub);">
+            <div style="margin-bottom:8px;"><strong>选项：</strong>${optionsDetail}</div>
+            <div style="margin-bottom:6px; color:var(--text-main);">你的答案：<strong style="color:${statusColor}">${userDisplay}</strong></div>
+            <div style="margin-bottom:6px; color:var(--text-main);">正确答案：<strong style="color:var(--correct)">${correctDisplay}</strong></div>
+            ${r.explanation ? `<div class="explanation" style="margin-top:8px"><strong>解析：</strong>${esc(r.explanation)}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 
   $id('container').innerHTML = `
+    ${scoreHtml}
     <div class="card" style="text-align:center">
       <div style="font-size:48px; margin-bottom:16px">${pct >= 60 ? '🎉' : '💪'}</div>
       <h2 style="font-size:22px; font-weight:700;">${quizState.chapter} · 答题结果</h2>
