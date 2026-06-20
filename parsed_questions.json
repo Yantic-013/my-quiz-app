@@ -5946,7 +5946,7 @@
   {
     "id": "bd62ab0878e8",
     "chapter": "机电系统二 - 4.9.1",
-    "type": "single",
+    "type": "multi",
     "question": "当给飞机除冰前需要做哪些准备:",
     "options": [
       "关闭所有舱门及窗户",
@@ -5965,7 +5965,7 @@
   {
     "id": "ffcb5194fcef",
     "chapter": "机电系统二 - 4.9.1",
-    "type": "single",
+    "type": "multi",
     "question": "振动式结冰探测器:",
     "options": [
       "结冰后探头振动频率降低",
