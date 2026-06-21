@@ -369,8 +369,9 @@ body.dark .nav-item.active {
 }
 .btn-primary::before { display: none; }
 .btn-primary:hover:not(:disabled) {
+  background: var(--grad-primary);
   box-shadow: 0 12px 32px rgba(91,94,244,0.45);
-  filter: brightness(1.08);
+  filter: brightness(1.12);
   color: #fff;
   transform: translateY(-2px);
 }
@@ -11344,6 +11345,12 @@ function renderQuizCard() {
         quizState.currentIndex++;
       }
       renderQuizCard();
+      // 短暂禁用选项 pointer-events，防止鼠标停留在原位时新题选项出现悬停残影
+      const newGrid = $id('optionsGrid');
+      if (newGrid) {
+        newGrid.style.pointerEvents = 'none';
+        setTimeout(() => { newGrid.style.pointerEvents = ''; }, 350);
+      }
     }
   });
 
