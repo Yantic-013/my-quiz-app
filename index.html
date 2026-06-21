@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -1089,6 +1089,157 @@ body.dark .nav-item.active {
   .question-row { gap: 12px; }
   .question-num { width: 38px; height: 38px; font-size: 14px; border-radius: 10px; }
   .question-text { font-size: 15px; padding-top: 8px; }
+}
+
+/* ===== 章节卡片 (iPad 优化版) ===== */
+.chapter-card {
+  display: flex; align-items: center; gap: 16px;
+  padding: 18px 20px; border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md); cursor: pointer;
+  background: var(--bg-card); min-height: 64px; margin-bottom: 10px;
+  user-select: none;
+  transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+.chapter-card:hover {
+  border-color: var(--primary); background: #F3E8FF;
+  box-shadow: var(--shadow-sm), -3px 0 0 var(--primary);
+  transform: translateX(3px);
+}
+body.dark .chapter-card:hover { background: rgba(139,92,246,0.12); }
+.chapter-card:active { transform: scale(0.985) translateX(0); }
+.chapter-card-num {
+  flex-shrink: 0; width: 36px; height: 36px; border-radius: 8px;
+  background: var(--primary-light); color: var(--primary);
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Outfit', sans-serif;
+}
+.chapter-card-name {
+  flex: 1; font-size: 15px; font-weight: 600;
+  color: var(--text-main); line-height: 1.5;
+}
+.chapter-card-badge {
+  flex-shrink: 0; font-size: 12.5px; color: var(--text-sub);
+  font-weight: 500; text-align: right; white-space: nowrap;
+}
+
+/* ===== 模拟考试章节网格卡片 ===== */
+.exam-chapter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px; margin-top: 4px;
+}
+.exam-chapter-card {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 14px 16px; border: 2px solid var(--border-color);
+  border-radius: var(--radius-md); cursor: pointer;
+  background: var(--bg-card); min-height: 64px; user-select: none;
+  transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+.exam-chapter-card:hover { border-color: var(--primary); background: #F3E8FF; }
+body.dark .exam-chapter-card:hover { background: rgba(139,92,246,0.1); }
+.exam-chapter-card.selected {
+  border-color: var(--primary); background: #F3E8FF;
+  box-shadow: 0 0 0 3px rgba(139,92,246,0.15);
+}
+body.dark .exam-chapter-card.selected { background: rgba(139,92,246,0.12); }
+.exam-chapter-card input[type="checkbox"] {
+  width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0;
+  accent-color: var(--primary); cursor: pointer;
+}
+.exam-chapter-card-body { flex: 1; }
+.exam-chapter-card-name {
+  font-size: 13.5px; font-weight: 600; color: var(--text-main);
+  line-height: 1.45; margin-bottom: 4px;
+}
+.exam-chapter-card-count { font-size: 12px; color: var(--text-sub); font-weight: 500; }
+
+/* ===== 考试题数输入行 ===== */
+.exam-count-row { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.exam-count-item {
+  flex: 1; min-width: 160px; background: var(--bg-page);
+  border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 16px 18px;
+}
+.exam-count-label {
+  font-size: 12px; font-weight: 700; color: var(--text-sub);
+  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;
+}
+.exam-count-input {
+  width: 100%; padding: 12px 14px; border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main);
+  font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 700;
+  text-align: center; outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.exam-count-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow); }
+.exam-count-sub { font-size: 12px; color: var(--text-sub); margin-top: 8px; text-align: center; font-weight: 500; }
+
+/* ===== 空状态 ===== */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 72px 32px; text-align: center;
+}
+.empty-state-icon { font-size: 56px; margin-bottom: 20px; line-height: 1; }
+.empty-state-title { font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; line-height: 1.6; }
+.empty-state-desc { font-size: 15px; color: var(--text-sub); line-height: 1.8; margin-bottom: 28px; max-width: 340px; }
+
+/* ===== 危险操作按钮 ===== */
+.btn-destructive {
+  color: #DC2626; border: 1.5px solid #FECACA; background: #FFF5F5; font-weight: 600;
+}
+.btn-destructive:hover:not(:disabled) {
+  background: #FEE2E2; border-color: #EF4444; color: #991B1B;
+  box-shadow: 0 4px 14px rgba(239,68,68,0.22); transform: translateY(-1px);
+}
+body.dark .btn-destructive { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); color: #F87171; }
+body.dark .btn-destructive:hover:not(:disabled) { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.5); color: #FCA5A5; }
+
+/* ===== 增高版上传区 ===== */
+.upload-zone-lg {
+  border: 2.5px dashed var(--border-strong); border-radius: var(--radius-xl);
+  padding: 56px 40px; text-align: center; cursor: pointer;
+  background: linear-gradient(135deg, rgba(139,92,246,0.04) 0%, rgba(124,58,237,0.02) 100%);
+  min-height: 200px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+  transition: all var(--transition-normal);
+}
+.upload-zone-lg:hover {
+  border-color: var(--primary); background: #F3E8FF;
+  box-shadow: var(--shadow-md), 0 0 0 4px rgba(139,92,246,0.12);
+  transform: translateY(-2px);
+}
+body.dark .upload-zone-lg:hover { background: rgba(139,92,246,0.1); }
+.upload-zone-lg-icon { font-size: 48px; line-height: 1; }
+.upload-zone-lg-title { font-size: 16px; font-weight: 700; color: var(--text-main); }
+.upload-zone-lg-sub { font-size: 13.5px; color: var(--text-sub); font-weight: 500; }
+
+/* ===== 题库管理统计卡片 ===== */
+.manage-stat-item {
+  flex: 1 1 150px; background: var(--bg-card);
+  border: 1.5px solid var(--border-color); border-radius: var(--radius-lg);
+  padding: 22px 18px; text-align: center; position: relative;
+  overflow: hidden; transition: all var(--transition-normal);
+}
+.manage-stat-item::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 3px; background: var(--grad-primary);
+}
+.manage-stat-item:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+.manage-stat-num {
+  font-size: 38px; font-weight: 800;
+  background: var(--grad-hero); -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent; background-clip: text;
+  font-family: 'Outfit', sans-serif; line-height: 1.1;
+}
+.manage-stat-label {
+  font-size: 11.5px; color: var(--text-sub); margin-top: 8px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+/* ===== 响应式补充 ===== */
+@media (max-width: 640px) {
+  .exam-chapter-grid { grid-template-columns: 1fr 1fr !important; }
+  .exam-count-row { flex-direction: column; }
 }
 </style>
 </head>
@@ -10828,46 +10979,55 @@ function renderManage(container) {
       const qs = questionBank.filter(q => q.chapter === ch);
       const single = qs.filter(q => q.type === 'single').length;
       const multi = qs.filter(q => q.type === 'multi').length;
-      return `<div class="chapter-item" style="cursor:default">
-        <span>${esc(ch)}</span>
-        <span class="chapter-badge">单选 ${single} · 多选 ${multi}</span>
+      return `<div class="chapter-card" style="cursor:default">
+        <div class="chapter-card-num">${chapters.indexOf(ch)+1}</div>
+        <span class="chapter-card-name">${esc(ch)}</span>
+        <span class="chapter-card-badge">单选 ${single} · 多选 ${multi}</span>
       </div>`;
     }).join('');
   }
 
   container.innerHTML = `
     <div class="card">
-      <h2 style="font-size:20px; font-weight:700; margin-bottom:20px;">题库管理</h2>
-      <div class="stats-row" style="margin-bottom:24px">
-        <div class="stat-item"><div class="stat-num">${questionBank.length}</div><div class="stat-label">总题数</div></div>
-        <div class="stat-item"><div class="stat-num">${chapters.length}</div><div class="stat-label">章节数</div></div>
-        <div class="stat-item"><div class="stat-num">${countValidErrors()}</div><div class="stat-label">错题数</div></div>
+      <h2 style="font-size:22px; font-weight:700; margin-bottom:24px;">题库管理</h2>
+
+      <div class="stats-row" style="margin-bottom:28px">
+        <div class="manage-stat-item"><div class="manage-stat-num">${questionBank.length}</div><div class="manage-stat-label">总题数</div></div>
+        <div class="manage-stat-item"><div class="manage-stat-num">${chapters.length}</div><div class="manage-stat-label">章节数</div></div>
+        <div class="manage-stat-item"><div class="manage-stat-num">${countValidErrors()}</div><div class="manage-stat-label">错题数</div></div>
       </div>
 
-      <div class="upload-zone" id="uploadZone">
-        <div style="font-size:36px">📂</div>
-        <p style="font-weight:600;">点击此处选择 Excel 题库文件（.xlsx）</p>
+      <div class="upload-zone-lg" id="uploadZone">
+        <div class="upload-zone-lg-icon">📂</div>
+        <div class="upload-zone-lg-title">点击或拖拽 Excel 题库文件到此处</div>
+        <div class="upload-zone-lg-sub">支持 .xlsx 格式 · 重复题目自动跳过</div>
         <input type="file" id="fileInput" accept=".xlsx" style="display:none">
       </div>
 
       <div id="importMsg" style="margin-top:16px;"></div>
 
-      <div style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap">
-        <button class="btn btn-primary" id="btnExport">导出题库 JSON</button>
-        <button class="btn" id="btnExportErrors">导出错题集 JSON</button>
-        <button class="btn btn-danger" id="btnClear">清空题库</button>
-        <button class="btn btn-danger" id="btnClearErrors">清空错题集</button>
+      <div style="margin-top:24px;">
+        <div style="font-size:12px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px;">常规操作</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+          <button class="btn btn-primary" id="btnExport">⬇ 导出题库 JSON</button>
+          <button class="btn" id="btnExportErrors">⬇ 导出错题集 JSON</button>
+        </div>
+        <div style="font-size:12px; font-weight:700; color:#DC2626; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px;">⚠ 危险操作</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-destructive" id="btnClear">🗑 清空题库</button>
+          <button class="btn btn-destructive" id="btnClearErrors">🗑 清空错题集</button>
+        </div>
       </div>
     </div>
 
     <div class="card">
-      <h3 style="font-size:16px; font-weight:600; margin-bottom:16px;">题库总览</h3>
+      <h3 style="font-size:16px; font-weight:700; margin-bottom:16px;">题库总览</h3>
       ${chaptersHtml}
     </div>
 
     <div class="info-alert">
-      <strong>Excel 模板格式说明</strong>
-      <p style="margin-top:8px; color:var(--text-sub); font-size:13px; font-weight:500;">
+      <strong>📋 Excel 模板格式说明</strong>
+      <p style="margin-top:10px; color:var(--text-sub); font-size:13.5px; font-weight:500; line-height:1.8;">
         列顺序：章节 | 题型 | 题目 | 选项A | 选项B | 选项C | 选项D | ... | 正确答案 | 解析<br>
         题型填"单选"或"多选"，多选答案用逗号分隔如"A,C,E"，选项列至少4列，可扩展更多列
       </p>
@@ -11024,9 +11184,13 @@ function renderChapterList(container) {
   const chapters = getChapters();
   if (chapters.length === 0) {
     container.innerHTML = `
-      <div class="card" style="text-align:center; padding:60px 24px;">
-        <div style="font-size:48px; margin-bottom:16px">📚</div>
-        <p style="color:var(--text-sub); font-size:16px; font-weight:500;">还没有题目，请先到「题库管理」导入题库</p>
+      <div class="card">
+        <div class="empty-state">
+          <div class="empty-state-icon">📚</div>
+          <div class="empty-state-title">暂无题库内容</div>
+          <div class="empty-state-desc">还没有题目，请先到「题库管理」导入 Excel 格式的题库文件。</div>
+          <button class="btn btn-primary" onclick="currentPage='manage'; renderPage();" style="min-width:160px; padding:12px 24px;">去导入题库</button>
+        </div>
       </div>`;
     return;
   }
@@ -11057,9 +11221,10 @@ function renderChapterList(container) {
       const single = qs.filter(q => q.type === 'single').length;
       const multi = qs.filter(q => q.type === 'multi').length;
       totalQuestions += qs.length;
-      return `<div class="chapter-item" data-chapter="${escAttr(item.fullName)}">
-        <span>${esc(item.subName)}</span>
-        <span class="chapter-badge">单选 ${single} · 多选 ${multi}</span>
+      return `<div class="chapter-card" data-chapter="${escAttr(item.fullName)}">
+        <div class="chapter-card-num">${subItems.indexOf(item)+1}</div>
+        <span class="chapter-card-name">${esc(item.subName)}</span>
+        <span class="chapter-card-badge">单选 ${single} · 多选 ${multi}</span>
       </div>`;
     }).join('');
 
@@ -11095,7 +11260,7 @@ function renderChapterList(container) {
   $id('btnTabMemorize').addEventListener('click', () => { currentTab = 'memorize'; renderPage(); });
   $id('chapterList').addEventListener('click', function(e) {
     // 1. 判断是否点击了子章节项
-    const item = e.target.closest('.chapter-item');
+    const item = e.target.closest('.chapter-card');
     if (item) {
       const chapter = item.dataset.chapter;
       const questions = questionBank.filter(q => q.chapter === chapter);
@@ -11665,10 +11830,14 @@ function renderErrorBook(container) {
 
   if (errorBook.length === 0) {
     container.innerHTML = `
-      <div class="card" style="text-align:center; padding:60px 24px;">
-        <div style="font-size:48px; margin-bottom:16px">📝</div>
-        <p style="color:var(--text-sub); font-size:16px;">错题集为空，继续加油！</p>
-      </div>`;
+      <div class="card">
+      <div class="empty-state">
+        <div class="empty-state-icon">📝</div>
+        <div class="empty-state-title">错题集为空</div>
+        <div class="empty-state-desc">继续加油！答错的题目会自动收录到这里，方便你集中复习。</div>
+        <button class="btn btn-primary" onclick="currentPage='practice'; renderPage();" style="min-width:160px; padding:12px 24px;">去章节练习</button>
+      </div>
+    </div>`;
     return;
   }
 
@@ -11770,8 +11939,13 @@ function renderExamConfig(container) {
   const chapters = getChapters();
   if (chapters.length === 0) {
     container.innerHTML = `
-      <div class="card" style="text-align:center; padding:60px 24px;">
-        <p style="color:var(--text-sub); font-size:16px;">还没有题目，请先到「题库管理」导入题库</p>
+      <div class="card">
+        <div class="empty-state">
+          <div class="empty-state-icon">🎯</div>
+          <div class="empty-state-title">暂无题目</div>
+          <div class="empty-state-desc">请先到「题库管理」导入 Excel 题库，然后回来配置考试。</div>
+          <button class="btn btn-primary" onclick="currentPage='manage'; renderPage();" style="min-width:160px; padding:12px 24px;">去题库管理</button>
+        </div>
       </div>`;
     return;
   }
@@ -11785,30 +11959,35 @@ function renderExamConfig(container) {
 
       <div style="margin-bottom:24px">
         <p style="margin-bottom:12px; font-weight:600">选择章节：</p>
-        <div id="examChapters" style="display:flex; flex-wrap:wrap; gap:10px">
+        <div id="examChapters" class="exam-chapter-grid">
           ${chapters.map(ch => {
             const single = questionBank.filter(q => q.chapter === ch && q.type === 'single').length;
             const multi = questionBank.filter(q => q.chapter === ch && q.type === 'multi').length;
-            return `<label class="exam-chapter-label">
+            return `<label class="exam-chapter-card selected">
               <input type="checkbox" value="${escAttr(ch)}" class="exam-chk" checked>
-              <span>${esc(ch)}</span> <span class="chapter-badge" style="margin-left:6px; font-size:11px;">(单${single}/多${multi})</span>
+              <div class="exam-chapter-card-body">
+                <div class="exam-chapter-card-name">${esc(ch)}</div>
+                <div class="exam-chapter-card-count">单选 ${single} · 多选 ${multi}</div>
+              </div>
             </label>`;
           }).join('')}
         </div>
-        <div style="margin-top:12px; display:flex; gap:8px;">
+        <div style="margin-top:14px; display:flex; gap:8px;">
           <button class="btn btn-sm" id="btnSelectAll">全选</button>
           <button class="btn btn-sm" id="btnDeselectAll">取消全选</button>
         </div>
       </div>
 
-      <div style="display:flex; gap:24px; margin-bottom:24px; flex-wrap:wrap">
-        <div>
-          <label style="font-weight:600; margin-right:8px;">单选题数：</label>
-          <input type="number" class="input" id="examSingleCount" value="${Math.min(10, totalSingle)}" min="0" max="${totalSingle}" style="width:100px">
+      <div class="exam-count-row">
+        <div class="exam-count-item">
+          <div class="exam-count-label">单选题数</div>
+          <input type="number" class="exam-count-input" id="examSingleCount" value="${Math.min(10, totalSingle)}" min="0" max="${totalSingle}">
+          <div class="exam-count-sub">最多可选 ${totalSingle} 题</div>
         </div>
-        <div>
-          <label style="font-weight:600; margin-right:8px;">多选题数：</label>
-          <input type="number" class="input" id="examMultiCount" value="${Math.min(5, totalMulti)}" min="0" max="${totalMulti}" style="width:100px">
+        <div class="exam-count-item">
+          <div class="exam-count-label">多选题数</div>
+          <input type="number" class="exam-count-input" id="examMultiCount" value="${Math.min(5, totalMulti)}" min="0" max="${totalMulti}">
+          <div class="exam-count-sub">最多可选 ${totalMulti} 题</div>
         </div>
       </div>
 
@@ -11817,7 +11996,7 @@ function renderExamConfig(container) {
         <span id="availableHint"></span>
       </p>
 
-      <button class="btn btn-primary" id="btnStartExam">开始考试</button>
+      <button class="btn btn-primary" id="btnStartExam" style="min-width:160px; padding:14px 28px; font-size:16px;">🚀 开始考试</button>
     </div>
   `;
 
@@ -11830,13 +12009,27 @@ function renderExamConfig(container) {
   }
 
   updateHint();
-  document.getElementById('examChapters').addEventListener('change', updateHint);
+  document.getElementById('examChapters').addEventListener('change', function(e) {
+    if (e.target.classList.contains('exam-chk')) {
+      const card = e.target.closest('.exam-chapter-card');
+      if (card) card.classList.toggle('selected', e.target.checked);
+    }
+    updateHint();
+  });
   $id('btnSelectAll').addEventListener('click', () => {
-    document.querySelectorAll('.exam-chk').forEach(cb => cb.checked = true);
+    document.querySelectorAll('.exam-chk').forEach(cb => {
+      cb.checked = true;
+      const card = cb.closest('.exam-chapter-card');
+      if (card) card.classList.add('selected');
+    });
     updateHint();
   });
   $id('btnDeselectAll').addEventListener('click', () => {
-    document.querySelectorAll('.exam-chk').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.exam-chk').forEach(cb => {
+      cb.checked = false;
+      const card = cb.closest('.exam-chapter-card');
+      if (card) card.classList.remove('selected');
+    });
     updateHint();
   });
 
