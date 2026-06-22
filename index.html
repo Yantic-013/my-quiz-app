@@ -1032,6 +1032,57 @@ body.dark .nav-item.active {
   box-shadow: 0 0 8px rgba(91,94,244,0.4);
 }
 
+/* ===== 收藏 & 搜索 CSS ===== */
+.quiz-bookmark-btn {
+  background: transparent;
+  border-color: var(--border-color);
+  color: var(--text-sub);
+  padding: 4px 10px;
+  font-size: 14px;
+  transition: all var(--transition-fast);
+}
+.quiz-bookmark-btn:hover { border-color: #F59E0B; color: #F59E0B; background: rgba(245,158,11,0.1); transform: scale(1.12); }
+.quiz-bookmark-btn.bookmarked { border-color: #F59E0B; color: #F59E0B; background: rgba(245,158,11,0.12); }
+
+.search-result-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.search-result-card:hover { border-color: var(--primary); box-shadow: var(--shadow-sm), -3px 0 0 var(--primary); }
+
+/* ===== iPad touch hover-flash fix ===== */
+/* Temporarily freeze option visuals after single-choice auto-advance.
+   Uses !important to override iOS sticky-hover and desktop :hover states. */
+.options-grid-frozen .option-btn,
+.options-grid-frozen .option-btn:hover,
+.options-grid-frozen .option-btn:active,
+.options-grid-frozen .option-btn:focus {
+  pointer-events: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  border-color: var(--border-color) !important;
+  background: var(--bg-card) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: none !important;
+}
+.options-grid-frozen .option-btn.selected {
+  border-color: var(--primary) !important;
+  background: var(--primary-light) !important;
+  box-shadow: 0 0 0 3px var(--primary-glow) !important;
+}
+.options-grid-frozen .option-btn.correct {
+  border-color: var(--correct) !important;
+  background: var(--correct-bg) !important;
+}
+.options-grid-frozen .option-btn.wrong {
+  border-color: var(--wrong) !important;
+  background: var(--wrong-bg) !important;
+}
+
 /* ===== Question row layout ===== */
 .question-row {
   display: flex;
@@ -1255,6 +1306,8 @@ body.dark .upload-zone-lg:hover { background: rgba(139,92,246,0.1); }
     <div class="nav-item active" data-page="practice">章节练习</div>
     <div class="nav-item" data-page="exam-config">模拟考试</div>
     <div class="nav-item" data-page="errors">错题集</div>
+    <div class="nav-item" data-page="bookmarks">⭐ 收藏集</div>
+    <div class="nav-item" data-page="search">🔍 搜索</div>
     <div class="nav-item" data-page="manage">题库管理</div>
   </div>
   <button class="theme-toggle-btn" id="themeToggleBtn" title="切换主题">
@@ -10857,6 +10910,7 @@ const DEFAULT_QUESTIONS = [
 
 let questionBank = [];
 let errorBook = [];
+let bookmarks = [];
 let settings = {};
 
 // 异步加载与历史迁移
@@ -10864,6 +10918,7 @@ async function initData() {
   try {
     let qb = await loadData('questionBank');
     let eb = await loadData('errorBook');
+    let bm = await loadData('bookmarks');
     let setts = await loadData('settings');
 
     // 如果 IndexedDB 没有数据，且 localStorage 也没有旧数据，则自动加载内置默认题库
@@ -10896,6 +10951,7 @@ async function initData() {
 
     questionBank = qb || [];
     errorBook = eb || [];
+    bookmarks = bm || [];
     settings = setts || {};
 
     // 数据库迁移与版本升级：自动载入/合并新版 587 道内置题库
@@ -10934,6 +10990,7 @@ async function initData() {
 async function persist() {
   await saveData('questionBank', questionBank);
   await saveData('errorBook', errorBook);
+  await saveData('bookmarks', bookmarks);
   await saveData('settings', settings);
 }
 
@@ -10962,6 +11019,8 @@ function renderPage() {
     case 'practice': renderChapterList(c); break;
     case 'exam-config': renderExamConfig(c); break;
     case 'errors': renderErrorBook(c); break;
+    case 'bookmarks': renderBookmarks(c); break;
+    case 'search': renderSearch(c); break;
     case 'manage': renderManage(c); break;
   }
 }
@@ -11456,6 +11515,9 @@ function renderQuizCard() {
           <button class="btn btn-sm" id="btnToggleFlag" style="padding: 4px 10px; font-size: 12px; font-weight: 600; border-color: ${isFlagged ? 'var(--warning)' : 'var(--border-color)'}; color: ${isFlagged ? 'var(--warning)' : 'var(--text-sub)'}; background: ${isFlagged ? 'var(--warning-bg)' : 'transparent'};">
             ${isFlagged ? '🚩 已标记' : '🏳️ 标记此题'}
           </button>
+          <button class="btn btn-sm quiz-bookmark-btn ${bookmarks.includes(q.id) ? 'bookmarked' : ''}" id="btnToggleBookmark">
+            ${bookmarks.includes(q.id) ? '⭐' : '☆'}
+          </button>
           <button class="btn btn-sm" id="btnToggleNav" style="padding: 4px 10px; font-size: 12px; font-weight: 600; border-color: var(--primary); color: var(--primary);">${quizState.navCollapsed ? '展开题号' : '收起题号'}</button>
         </div>
       </div>
@@ -11510,11 +11572,16 @@ function renderQuizCard() {
         quizState.currentIndex++;
       }
       renderQuizCard();
-      // 短暂禁用选项 pointer-events，防止鼠标停留在原位时新题选项出现悬停残影
+      // 修复桌面端鼠标悬停残影 + iPad iOS sticky-hover 残影
+      // 使用 CSS class（含 !important）强制覆盖所有 :hover/:active/:focus 视觉状态
       const newGrid = $id('optionsGrid');
       if (newGrid) {
+        newGrid.classList.add('options-grid-frozen');
         newGrid.style.pointerEvents = 'none';
-        setTimeout(() => { newGrid.style.pointerEvents = ''; }, 350);
+        setTimeout(() => {
+          newGrid.classList.remove('options-grid-frozen');
+          newGrid.style.pointerEvents = '';
+        }, 450);
       }
     }
   });
@@ -11548,6 +11615,15 @@ function renderQuizCard() {
     renderQuizCard();
   });
 
+
+  $id('btnToggleBookmark').addEventListener('click', async () => {
+    const qId = q.id;
+    const bi = bookmarks.indexOf(qId);
+    if (bi >= 0) bookmarks.splice(bi, 1);
+    else bookmarks.push(qId);
+    await persist();
+    renderQuizCard();
+  });
   $id('btnPrev').addEventListener('click', () => { quizState.currentIndex--; renderQuizCard(); });
   if (idx < total - 1) {
     $id('btnNext').addEventListener('click', () => { quizState.currentIndex++; renderQuizCard(); });
@@ -11933,9 +12009,136 @@ function renderErrorBook(container) {
 }
 
 /* ================================================================
+   收藏集
+   ================================================================ */
+function renderBookmarks(container) {
+  bookmarks = bookmarks.filter(id => questionBank.some(q => q.id === id));
+  if (bookmarks.length === 0) {
+    container.innerHTML = '<div class="card"><div class="empty-state"><div class="empty-state-icon">⭐</div><div class="empty-state-title">收藏集为空</div><div class="empty-state-desc">在刷题过程中点击 ☆ 星标按钮，即可将题目收藏到这里。</div><button class="btn btn-primary" onclick="currentPage=\'practice\'; renderPage();" style="min-width:160px; padding:12px 24px;">去章节练习</button></div></div>';
+    return;
+  }
+  const chapters = [...new Set(bookmarks.map(id => { const q = questionBank.find(q => q.id === id); return q ? q.chapter : '(已删除)'; }))];
+  container.innerHTML = '<div class="card"><div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px"><h2 id="bmHeading" style="font-size:20px; font-weight:700;">⭐ 收藏集 · ' + bookmarks.length + ' 题</h2><div style="display:flex; align-items:center; gap:8px;"><select class="select" id="bookmarkFilter"><option value="all">全部章节</option>' + chapters.map(ch => '<option value="' + escAttr(ch) + '">' + esc(ch) + '</option>').join('') + '</select><button class="btn btn-primary btn-sm" id="btnRetryBookmarks">重新练习全部</button></div></div><div id="bookmarkList"></div></div>';
+
+  function renderBmList(filter) {
+    const list = $id('bookmarkList');
+    const filtered = bookmarks.filter(id => {
+      const q = questionBank.find(q => q.id === id);
+      if (!q) return false;
+      if (filter && filter !== 'all' && q.chapter !== filter) return false;
+      return true;
+    });
+    if (!filtered.length) { list.innerHTML = '<p style="color:var(--text-sub);text-align:center;padding:20px">该章节暂无收藏</p>'; return; }
+    list.innerHTML = filtered.map(id => {
+      const q = questionBank.find(q => q.id === id);
+      if (!q) return '';
+      const ansStr = q.answer.join(', ');
+      const optsHtml = q.options.map((opt, i) => { const l = String.fromCharCode(65+i); const ok = q.answer.includes(l); return '<span class="result-opt ' + (ok?'correct':'') + '">' + l + '. ' + esc(opt) + '</span>'; }).join(' ');
+      return '<div class="error-item collapsed" style="display:flex;flex-direction:column;gap:8px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;"><span style="font-weight:600;line-height:1.5;">' + esc(q.question) + '</span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0;"><span class="tag ' + (q.type==='multi'?'tag-multi':'tag-single') + '">' + (q.type==='multi'?'多选':'单选') + '</span><span class="result-arrow" style="font-size:12px;color:var(--text-sub);transition:transform 0.2s;">▶</span></div></div><div style="font-size:13px;color:var(--text-sub);font-weight:500;">正确答案：<strong style="color:var(--correct)">' + ansStr + '</strong> · 章节：' + esc(q.chapter) + '<button class="btn btn-sm btn-destructive" style="margin-left:8px;padding:3px 8px;font-size:11px;" data-id="' + q.id + '" data-action="remove-bm">移除</button></div><div class="error-detail" style="margin-top:8px;padding-top:12px;border-top:1px solid var(--border-color);font-size:13px;color:var(--text-sub);"><div style="margin-bottom:8px;"><strong>选项：</strong>' + optsHtml + '</div>' + (q.explanation ? '<div class="explanation" style="margin-top:8px"><strong>解析：</strong>' + esc(q.explanation) + '</div>' : '') + '</div></div>';
+    }).join('');
+    list.querySelectorAll('[data-action="remove-bm"]').forEach(btn => {
+      btn.addEventListener('click', async function(e) {
+        e.stopPropagation();
+        const i = bookmarks.indexOf(this.dataset.id);
+        if (i >= 0) bookmarks.splice(i, 1);
+        await persist();
+        const h2 = $id('bmHeading');
+        if (h2) h2.textContent = '⭐ 收藏集 · ' + bookmarks.length + ' 题';
+        renderBmList($id('bookmarkFilter') ? $id('bookmarkFilter').value : 'all');
+      });
+    });
+    list.querySelectorAll('.error-item').forEach(item => {
+      item.addEventListener('click', function(e) {
+        if (e.target.tagName === 'BUTTON') return;
+        this.classList.toggle('collapsed');
+        const arrow = this.querySelector('.result-arrow');
+        if (arrow) arrow.style.transform = this.classList.contains('collapsed') ? '' : 'rotate(90deg)';
+      });
+    });
+  }
+
+  renderBmList('all');
+  $id('bookmarkFilter').addEventListener('change', function() { renderBmList(this.value); });
+  $id('btnRetryBookmarks').addEventListener('click', () => {
+    const qs = bookmarks.map(id => questionBank.find(q => q.id === id)).filter(Boolean);
+    if (!qs.length) { alert('没有可练习的收藏题'); return; }
+    startQuiz(qs, '收藏集练习');
+  });
+}
+
+/* ================================================================
+   题目搜索
+   ================================================================ */
+function renderSearch(container) {
+  container.innerHTML = '<div class="card" style="margin-bottom:0;"><h2 style="font-size:20px; font-weight:700; margin-bottom:16px;">🔍 题目搜索</h2><div style="position:relative; margin-bottom:8px;"><input type="text" id="searchInput" class="input" placeholder="输入关键词搜索题目、选项或章节名..." style="width:100%; padding:14px 20px 14px 48px; font-size:16px; border-radius:var(--radius-lg); box-sizing:border-box;"><span style="position:absolute; left:16px; top:50%; transform:translateY(-50%); font-size:18px; pointer-events:none;">🔍</span><button id="searchClear" style="position:absolute; right:14px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-sub); font-size:20px; display:none;">✕</button></div><div id="searchMeta" style="font-size:13px; color:var(--text-sub); font-weight:500; margin-bottom:4px; min-height:20px;"></div></div><div id="searchResults" style="margin-top:12px;"></div>';
+
+  const input = $id('searchInput');
+  const meta = $id('searchMeta');
+  const results = $id('searchResults');
+  const clearBtn = $id('searchClear');
+
+  function escRx(s) {
+    return s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+  }
+
+  function highlight(text, kw) {
+    if (!kw) return esc(text);
+    const parts = esc(text).split(new RegExp('(' + escRx(kw) + ')', 'gi'));
+    return parts.map((p, i) => i % 2 === 1 ? '<mark style="background:rgba(139,92,246,0.2);color:var(--primary);border-radius:2px;padding:0 2px;">' + p + '</mark>' : p).join('');
+  }
+
+  function doSearch(query) {
+    clearBtn.style.display = query ? '' : 'none';
+    if (!query.trim()) {
+      meta.textContent = '题库共 ' + questionBank.length + ' 题，输入关键词开始搜索';
+      results.innerHTML = '';
+      return;
+    }
+    const kw = query.toLowerCase();
+    const matched = questionBank.filter(q =>
+      q.question.toLowerCase().includes(kw) ||
+      q.chapter.toLowerCase().includes(kw) ||
+      q.options.some(o => o.toLowerCase().includes(kw)) ||
+      (q.explanation && q.explanation.toLowerCase().includes(kw))
+    );
+    meta.textContent = '找到 ' + matched.length + ' 道题';
+    if (!matched.length) {
+      results.innerHTML = '<div class="card"><div class="empty-state" style="padding:48px 24px;"><div class="empty-state-icon">🔍</div><div class="empty-state-title">未找到相关题目</div><div class="empty-state-desc">请尝试其他关键词</div></div></div>';
+      return;
+    }
+    results.innerHTML = matched.map(q => {
+      const isBm = bookmarks.includes(q.id);
+      const optsHtml = q.options.map((opt, i) => {
+        const l = String.fromCharCode(65+i);
+        const isAns = q.answer.includes(l);
+        return '<div style="font-size:13.5px;padding:6px 10px;border-radius:var(--radius-sm);background:' + (isAns?'var(--correct-bg)':'var(--bg-page)') + ';color:' + (isAns?'var(--correct)':'var(--text-sub)') + ';font-weight:' + (isAns?'600':'400') + ';margin-bottom:4px;">' + l + '. ' + highlight(opt, query) + '</div>';
+      }).join('');
+      return '<div class="search-result-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span class="tag ' + (q.type==='multi'?'tag-multi':'tag-single') + '">' + (q.type==='multi'?'多选':'单选') + '</span><span style="font-size:12px;color:var(--text-sub);font-weight:500;">' + esc(q.chapter) + '</span></div><button class="btn btn-sm quiz-bookmark-btn ' + (isBm?'bookmarked':'') + ' search-bm-btn" data-id="' + q.id + '" title="' + (isBm?'取消收藏':'收藏此题') + '" style="flex-shrink:0;">' + (isBm?'⭐':'☆') + '</button></div><div style="font-weight:600;font-size:15px;line-height:1.6;color:var(--text-main);margin-bottom:10px;">' + highlight(q.question, query) + '</div>' + optsHtml + (q.explanation ? '<div style="margin-top:10px;padding:10px 12px;background:var(--bg-page);border-left:3px solid var(--primary);border-radius:0 var(--radius-sm) var(--radius-sm) 0;font-size:13px;color:var(--text-sub);line-height:1.7;"><strong>解析：</strong>' + highlight(q.explanation, query) + '</div>' : '') + '</div>';
+    }).join('');
+    results.querySelectorAll('.search-bm-btn').forEach(btn => {
+      btn.addEventListener('click', async function(e) {
+        e.stopPropagation();
+        const qId = this.dataset.id;
+        const bi = bookmarks.indexOf(qId);
+        if (bi >= 0) { bookmarks.splice(bi, 1); this.textContent = '☆'; this.classList.remove('bookmarked'); this.title='收藏此题'; }
+        else { bookmarks.push(qId); this.textContent = '⭐'; this.classList.add('bookmarked'); this.title='取消收藏'; }
+        await persist();
+      });
+    });
+  }
+
+  meta.textContent = '题库共 ' + questionBank.length + ' 题，输入关键词开始搜索';
+  let debounce;
+  input.addEventListener('input', function() { clearTimeout(debounce); debounce = setTimeout(() => doSearch(this.value), 200); });
+  clearBtn.addEventListener('click', () => { input.value = ''; doSearch(''); input.focus(); });
+  input.focus();
+}
+
+/* ================================================================
    模拟考试
    ================================================================ */
 function renderExamConfig(container) {
+
   const chapters = getChapters();
   if (chapters.length === 0) {
     container.innerHTML = `
