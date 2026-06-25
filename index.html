@@ -1,6 +1,20 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script>
+  // 访问口令验证（一次输入，本设备永久有效）
+  (function() {
+    if (localStorage.getItem('quiz_access') !== 'true') {
+      var pwd = prompt('请输入访问口令：');
+      if (pwd === '23014104') {
+        localStorage.setItem('quiz_access', 'true');
+      } else {
+        document.documentElement.innerHTML = '<h2 style="text-align:center;margin-top:40vh;font-family:sans-serif;color:#555;">口令错误，访问被拒绝。</h2>';
+        setTimeout(function(){ window.location.href = 'about:blank'; }, 1500);
+      }
+    }
+  })();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
